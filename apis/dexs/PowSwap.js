@@ -1,236 +1,342 @@
-import fetch from 'node-fetch';
-
 // Web3js
 import Web3 from 'web3';
-import { priceImp, maxBuyFee, maxSellFee, ETHERaddress, ownerAddress } from '../../config/const.js';
-import { ETHERprovider as provider } from '../../startConnection.js';
+import { priceImp, maxBuyFee, maxSellFee, ETHWaddress, ownerAddress } from '../../config/const.js';
+import { ETHPowprovider as provider } from '../../startConnection.js';
 var web3 = new Web3(provider);
 
 // const
 const mainTokenAddress = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'; // WETH
-const routerAddress = '0xE592427A0AEce92De3Edee1F18E0157C05861564';
-const multicallAddress = ETHERaddress;
-const mainTokentoSell = '0.0005';
+const routerAddress = '0x6851e767Aaa9C4674Fe8cAE95AFCc819b7Fb0403';
+const multicallAddress = ETHWaddress;
+const mainTokentoSell = '0.05';
 const maxgas = 2000000;
-const minMain = 1;
+const minMain = 5;
 
 // ABIs
 const routerAbi = [
   {
     inputs: [
       { internalType: 'address', name: '_factory', type: 'address' },
-      { internalType: 'address', name: '_WETH9', type: 'address' },
+      { internalType: 'address', name: '_WETH', type: 'address' },
     ],
     stateMutability: 'nonpayable',
     type: 'constructor',
   },
-  { inputs: [], name: 'WETH9', outputs: [{ internalType: 'address', name: '', type: 'address' }], stateMutability: 'view', type: 'function' },
+  { inputs: [], name: 'WETH', outputs: [{ internalType: 'address', name: '', type: 'address' }], stateMutability: 'view', type: 'function' },
   {
     inputs: [
-      {
-        components: [
-          { internalType: 'bytes', name: 'path', type: 'bytes' },
-          { internalType: 'address', name: 'recipient', type: 'address' },
-          { internalType: 'uint256', name: 'deadline', type: 'uint256' },
-          { internalType: 'uint256', name: 'amountIn', type: 'uint256' },
-          { internalType: 'uint256', name: 'amountOutMinimum', type: 'uint256' },
-        ],
-        internalType: 'struct ISwapRouter.ExactInputParams',
-        name: 'params',
-        type: 'tuple',
-      },
+      { internalType: 'address', name: 'tokenA', type: 'address' },
+      { internalType: 'address', name: 'tokenB', type: 'address' },
+      { internalType: 'uint256', name: 'amountADesired', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountBDesired', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountAMin', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountBMin', type: 'uint256' },
+      { internalType: 'address', name: 'to', type: 'address' },
+      { internalType: 'uint256', name: 'deadline', type: 'uint256' },
     ],
-    name: 'exactInput',
-    outputs: [{ internalType: 'uint256', name: 'amountOut', type: 'uint256' }],
-    stateMutability: 'payable',
+    name: 'addLiquidity',
+    outputs: [
+      { internalType: 'uint256', name: 'amountA', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountB', type: 'uint256' },
+      { internalType: 'uint256', name: 'liquidity', type: 'uint256' },
+    ],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
   {
     inputs: [
-      {
-        components: [
-          { internalType: 'address', name: 'tokenIn', type: 'address' },
-          { internalType: 'address', name: 'tokenOut', type: 'address' },
-          { internalType: 'uint24', name: 'fee', type: 'uint24' },
-          { internalType: 'address', name: 'recipient', type: 'address' },
-          { internalType: 'uint256', name: 'deadline', type: 'uint256' },
-          { internalType: 'uint256', name: 'amountIn', type: 'uint256' },
-          { internalType: 'uint256', name: 'amountOutMinimum', type: 'uint256' },
-          { internalType: 'uint160', name: 'sqrtPriceLimitX96', type: 'uint160' },
-        ],
-        internalType: 'struct ISwapRouter.ExactInputSingleParams',
-        name: 'params',
-        type: 'tuple',
-      },
+      { internalType: 'address', name: 'token', type: 'address' },
+      { internalType: 'uint256', name: 'amountTokenDesired', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountTokenMin', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountETHMin', type: 'uint256' },
+      { internalType: 'address', name: 'to', type: 'address' },
+      { internalType: 'uint256', name: 'deadline', type: 'uint256' },
     ],
-    name: 'exactInputSingle',
-    outputs: [{ internalType: 'uint256', name: 'amountOut', type: 'uint256' }],
-    stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        components: [
-          { internalType: 'bytes', name: 'path', type: 'bytes' },
-          { internalType: 'address', name: 'recipient', type: 'address' },
-          { internalType: 'uint256', name: 'deadline', type: 'uint256' },
-          { internalType: 'uint256', name: 'amountOut', type: 'uint256' },
-          { internalType: 'uint256', name: 'amountInMaximum', type: 'uint256' },
-        ],
-        internalType: 'struct ISwapRouter.ExactOutputParams',
-        name: 'params',
-        type: 'tuple',
-      },
+    name: 'addLiquidityETH',
+    outputs: [
+      { internalType: 'uint256', name: 'amountToken', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountETH', type: 'uint256' },
+      { internalType: 'uint256', name: 'liquidity', type: 'uint256' },
     ],
-    name: 'exactOutput',
-    outputs: [{ internalType: 'uint256', name: 'amountIn', type: 'uint256' }],
-    stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        components: [
-          { internalType: 'address', name: 'tokenIn', type: 'address' },
-          { internalType: 'address', name: 'tokenOut', type: 'address' },
-          { internalType: 'uint24', name: 'fee', type: 'uint24' },
-          { internalType: 'address', name: 'recipient', type: 'address' },
-          { internalType: 'uint256', name: 'deadline', type: 'uint256' },
-          { internalType: 'uint256', name: 'amountOut', type: 'uint256' },
-          { internalType: 'uint256', name: 'amountInMaximum', type: 'uint256' },
-          { internalType: 'uint160', name: 'sqrtPriceLimitX96', type: 'uint160' },
-        ],
-        internalType: 'struct ISwapRouter.ExactOutputSingleParams',
-        name: 'params',
-        type: 'tuple',
-      },
-    ],
-    name: 'exactOutputSingle',
-    outputs: [{ internalType: 'uint256', name: 'amountIn', type: 'uint256' }],
     stateMutability: 'payable',
     type: 'function',
   },
   { inputs: [], name: 'factory', outputs: [{ internalType: 'address', name: '', type: 'address' }], stateMutability: 'view', type: 'function' },
   {
-    inputs: [{ internalType: 'bytes[]', name: 'data', type: 'bytes[]' }],
-    name: 'multicall',
-    outputs: [{ internalType: 'bytes[]', name: 'results', type: 'bytes[]' }],
-    stateMutability: 'payable',
+    inputs: [
+      { internalType: 'uint256', name: 'amountOut', type: 'uint256' },
+      { internalType: 'uint256', name: 'reserveIn', type: 'uint256' },
+      { internalType: 'uint256', name: 'reserveOut', type: 'uint256' },
+    ],
+    name: 'getAmountIn',
+    outputs: [{ internalType: 'uint256', name: 'amountIn', type: 'uint256' }],
+    stateMutability: 'pure',
     type: 'function',
   },
-  { inputs: [], name: 'refundETH', outputs: [], stateMutability: 'payable', type: 'function' },
   {
     inputs: [
-      { internalType: 'address', name: 'token', type: 'address' },
-      { internalType: 'uint256', name: 'value', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountIn', type: 'uint256' },
+      { internalType: 'uint256', name: 'reserveIn', type: 'uint256' },
+      { internalType: 'uint256', name: 'reserveOut', type: 'uint256' },
+    ],
+    name: 'getAmountOut',
+    outputs: [{ internalType: 'uint256', name: 'amountOut', type: 'uint256' }],
+    stateMutability: 'pure',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'uint256', name: 'amountOut', type: 'uint256' },
+      { internalType: 'address[]', name: 'path', type: 'address[]' },
+    ],
+    name: 'getAmountsIn',
+    outputs: [{ internalType: 'uint256[]', name: 'amounts', type: 'uint256[]' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'uint256', name: 'amountIn', type: 'uint256' },
+      { internalType: 'address[]', name: 'path', type: 'address[]' },
+    ],
+    name: 'getAmountsOut',
+    outputs: [{ internalType: 'uint256[]', name: 'amounts', type: 'uint256[]' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'uint256', name: 'amountA', type: 'uint256' },
+      { internalType: 'uint256', name: 'reserveA', type: 'uint256' },
+      { internalType: 'uint256', name: 'reserveB', type: 'uint256' },
+    ],
+    name: 'quote',
+    outputs: [{ internalType: 'uint256', name: 'amountB', type: 'uint256' }],
+    stateMutability: 'pure',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'address', name: 'tokenA', type: 'address' },
+      { internalType: 'address', name: 'tokenB', type: 'address' },
+      { internalType: 'uint256', name: 'liquidity', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountAMin', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountBMin', type: 'uint256' },
+      { internalType: 'address', name: 'to', type: 'address' },
       { internalType: 'uint256', name: 'deadline', type: 'uint256' },
-      { internalType: 'uint8', name: 'v', type: 'uint8' },
-      { internalType: 'bytes32', name: 'r', type: 'bytes32' },
-      { internalType: 'bytes32', name: 's', type: 'bytes32' },
     ],
-    name: 'selfPermit',
-    outputs: [],
-    stateMutability: 'payable',
+    name: 'removeLiquidity',
+    outputs: [
+      { internalType: 'uint256', name: 'amountA', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountB', type: 'uint256' },
+    ],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
   {
     inputs: [
       { internalType: 'address', name: 'token', type: 'address' },
-      { internalType: 'uint256', name: 'nonce', type: 'uint256' },
-      { internalType: 'uint256', name: 'expiry', type: 'uint256' },
-      { internalType: 'uint8', name: 'v', type: 'uint8' },
-      { internalType: 'bytes32', name: 'r', type: 'bytes32' },
-      { internalType: 'bytes32', name: 's', type: 'bytes32' },
-    ],
-    name: 'selfPermitAllowed',
-    outputs: [],
-    stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { internalType: 'address', name: 'token', type: 'address' },
-      { internalType: 'uint256', name: 'nonce', type: 'uint256' },
-      { internalType: 'uint256', name: 'expiry', type: 'uint256' },
-      { internalType: 'uint8', name: 'v', type: 'uint8' },
-      { internalType: 'bytes32', name: 'r', type: 'bytes32' },
-      { internalType: 'bytes32', name: 's', type: 'bytes32' },
-    ],
-    name: 'selfPermitAllowedIfNecessary',
-    outputs: [],
-    stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { internalType: 'address', name: 'token', type: 'address' },
-      { internalType: 'uint256', name: 'value', type: 'uint256' },
+      { internalType: 'uint256', name: 'liquidity', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountTokenMin', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountETHMin', type: 'uint256' },
+      { internalType: 'address', name: 'to', type: 'address' },
       { internalType: 'uint256', name: 'deadline', type: 'uint256' },
+    ],
+    name: 'removeLiquidityETH',
+    outputs: [
+      { internalType: 'uint256', name: 'amountToken', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountETH', type: 'uint256' },
+    ],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'address', name: 'token', type: 'address' },
+      { internalType: 'uint256', name: 'liquidity', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountTokenMin', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountETHMin', type: 'uint256' },
+      { internalType: 'address', name: 'to', type: 'address' },
+      { internalType: 'uint256', name: 'deadline', type: 'uint256' },
+    ],
+    name: 'removeLiquidityETHSupportingFeeOnTransferTokens',
+    outputs: [{ internalType: 'uint256', name: 'amountETH', type: 'uint256' }],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'address', name: 'token', type: 'address' },
+      { internalType: 'uint256', name: 'liquidity', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountTokenMin', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountETHMin', type: 'uint256' },
+      { internalType: 'address', name: 'to', type: 'address' },
+      { internalType: 'uint256', name: 'deadline', type: 'uint256' },
+      { internalType: 'bool', name: 'approveMax', type: 'bool' },
       { internalType: 'uint8', name: 'v', type: 'uint8' },
       { internalType: 'bytes32', name: 'r', type: 'bytes32' },
       { internalType: 'bytes32', name: 's', type: 'bytes32' },
     ],
-    name: 'selfPermitIfNecessary',
-    outputs: [],
-    stateMutability: 'payable',
+    name: 'removeLiquidityETHWithPermit',
+    outputs: [
+      { internalType: 'uint256', name: 'amountToken', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountETH', type: 'uint256' },
+    ],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
   {
     inputs: [
       { internalType: 'address', name: 'token', type: 'address' },
-      { internalType: 'uint256', name: 'amountMinimum', type: 'uint256' },
-      { internalType: 'address', name: 'recipient', type: 'address' },
+      { internalType: 'uint256', name: 'liquidity', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountTokenMin', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountETHMin', type: 'uint256' },
+      { internalType: 'address', name: 'to', type: 'address' },
+      { internalType: 'uint256', name: 'deadline', type: 'uint256' },
+      { internalType: 'bool', name: 'approveMax', type: 'bool' },
+      { internalType: 'uint8', name: 'v', type: 'uint8' },
+      { internalType: 'bytes32', name: 'r', type: 'bytes32' },
+      { internalType: 'bytes32', name: 's', type: 'bytes32' },
     ],
-    name: 'sweepToken',
+    name: 'removeLiquidityETHWithPermitSupportingFeeOnTransferTokens',
+    outputs: [{ internalType: 'uint256', name: 'amountETH', type: 'uint256' }],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'address', name: 'tokenA', type: 'address' },
+      { internalType: 'address', name: 'tokenB', type: 'address' },
+      { internalType: 'uint256', name: 'liquidity', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountAMin', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountBMin', type: 'uint256' },
+      { internalType: 'address', name: 'to', type: 'address' },
+      { internalType: 'uint256', name: 'deadline', type: 'uint256' },
+      { internalType: 'bool', name: 'approveMax', type: 'bool' },
+      { internalType: 'uint8', name: 'v', type: 'uint8' },
+      { internalType: 'bytes32', name: 'r', type: 'bytes32' },
+      { internalType: 'bytes32', name: 's', type: 'bytes32' },
+    ],
+    name: 'removeLiquidityWithPermit',
+    outputs: [
+      { internalType: 'uint256', name: 'amountA', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountB', type: 'uint256' },
+    ],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'uint256', name: 'amountOut', type: 'uint256' },
+      { internalType: 'address[]', name: 'path', type: 'address[]' },
+      { internalType: 'address', name: 'to', type: 'address' },
+      { internalType: 'uint256', name: 'deadline', type: 'uint256' },
+    ],
+    name: 'swapETHForExactTokens',
+    outputs: [{ internalType: 'uint256[]', name: 'amounts', type: 'uint256[]' }],
+    stateMutability: 'payable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'uint256', name: 'amountOutMin', type: 'uint256' },
+      { internalType: 'address[]', name: 'path', type: 'address[]' },
+      { internalType: 'address', name: 'to', type: 'address' },
+      { internalType: 'uint256', name: 'deadline', type: 'uint256' },
+    ],
+    name: 'swapExactETHForTokens',
+    outputs: [{ internalType: 'uint256[]', name: 'amounts', type: 'uint256[]' }],
+    stateMutability: 'payable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'uint256', name: 'amountOutMin', type: 'uint256' },
+      { internalType: 'address[]', name: 'path', type: 'address[]' },
+      { internalType: 'address', name: 'to', type: 'address' },
+      { internalType: 'uint256', name: 'deadline', type: 'uint256' },
+    ],
+    name: 'swapExactETHForTokensSupportingFeeOnTransferTokens',
     outputs: [],
     stateMutability: 'payable',
     type: 'function',
   },
   {
     inputs: [
-      { internalType: 'address', name: 'token', type: 'address' },
-      { internalType: 'uint256', name: 'amountMinimum', type: 'uint256' },
-      { internalType: 'address', name: 'recipient', type: 'address' },
-      { internalType: 'uint256', name: 'feeBips', type: 'uint256' },
-      { internalType: 'address', name: 'feeRecipient', type: 'address' },
+      { internalType: 'uint256', name: 'amountIn', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountOutMin', type: 'uint256' },
+      { internalType: 'address[]', name: 'path', type: 'address[]' },
+      { internalType: 'address', name: 'to', type: 'address' },
+      { internalType: 'uint256', name: 'deadline', type: 'uint256' },
     ],
-    name: 'sweepTokenWithFee',
-    outputs: [],
-    stateMutability: 'payable',
+    name: 'swapExactTokensForETH',
+    outputs: [{ internalType: 'uint256[]', name: 'amounts', type: 'uint256[]' }],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
   {
     inputs: [
-      { internalType: 'int256', name: 'amount0Delta', type: 'int256' },
-      { internalType: 'int256', name: 'amount1Delta', type: 'int256' },
-      { internalType: 'bytes', name: '_data', type: 'bytes' },
+      { internalType: 'uint256', name: 'amountIn', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountOutMin', type: 'uint256' },
+      { internalType: 'address[]', name: 'path', type: 'address[]' },
+      { internalType: 'address', name: 'to', type: 'address' },
+      { internalType: 'uint256', name: 'deadline', type: 'uint256' },
     ],
-    name: 'uniswapV3SwapCallback',
+    name: 'swapExactTokensForETHSupportingFeeOnTransferTokens',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
   },
   {
     inputs: [
-      { internalType: 'uint256', name: 'amountMinimum', type: 'uint256' },
-      { internalType: 'address', name: 'recipient', type: 'address' },
+      { internalType: 'uint256', name: 'amountIn', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountOutMin', type: 'uint256' },
+      { internalType: 'address[]', name: 'path', type: 'address[]' },
+      { internalType: 'address', name: 'to', type: 'address' },
+      { internalType: 'uint256', name: 'deadline', type: 'uint256' },
     ],
-    name: 'unwrapWETH9',
-    outputs: [],
-    stateMutability: 'payable',
+    name: 'swapExactTokensForTokens',
+    outputs: [{ internalType: 'uint256[]', name: 'amounts', type: 'uint256[]' }],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
   {
     inputs: [
-      { internalType: 'uint256', name: 'amountMinimum', type: 'uint256' },
-      { internalType: 'address', name: 'recipient', type: 'address' },
-      { internalType: 'uint256', name: 'feeBips', type: 'uint256' },
-      { internalType: 'address', name: 'feeRecipient', type: 'address' },
+      { internalType: 'uint256', name: 'amountIn', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountOutMin', type: 'uint256' },
+      { internalType: 'address[]', name: 'path', type: 'address[]' },
+      { internalType: 'address', name: 'to', type: 'address' },
+      { internalType: 'uint256', name: 'deadline', type: 'uint256' },
     ],
-    name: 'unwrapWETH9WithFee',
+    name: 'swapExactTokensForTokensSupportingFeeOnTransferTokens',
     outputs: [],
-    stateMutability: 'payable',
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'uint256', name: 'amountOut', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountInMax', type: 'uint256' },
+      { internalType: 'address[]', name: 'path', type: 'address[]' },
+      { internalType: 'address', name: 'to', type: 'address' },
+      { internalType: 'uint256', name: 'deadline', type: 'uint256' },
+    ],
+    name: 'swapTokensForExactETH',
+    outputs: [{ internalType: 'uint256[]', name: 'amounts', type: 'uint256[]' }],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'uint256', name: 'amountOut', type: 'uint256' },
+      { internalType: 'uint256', name: 'amountInMax', type: 'uint256' },
+      { internalType: 'address[]', name: 'path', type: 'address[]' },
+      { internalType: 'address', name: 'to', type: 'address' },
+      { internalType: 'uint256', name: 'deadline', type: 'uint256' },
+    ],
+    name: 'swapTokensForExactTokens',
+    outputs: [{ internalType: 'uint256[]', name: 'amounts', type: 'uint256[]' }],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
   { stateMutability: 'payable', type: 'receive' },
@@ -448,82 +554,8 @@ function setDecimals(number, decimals) {
   return numberAbs + numberDecimals;
 }
 
-// Get pair fee
-async function getFee(token0, token1) {
-  return new Promise(async (resolve) => {
-    var error = false;
-    var fee = 0;
-    var response = await fetch('https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3', {
-      method: 'POST',
-      headesrs: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        query:
-          `
-            {
-               pools(where:{
-                 token0:"` +
-          token0 +
-          `",
-                 token1:"` +
-          token1 +
-          `"
-               }){
-                 feeTier
-               }
-             }
-   `,
-      }),
-    });
-    var responseBody = await response.json();
-    if (responseBody.data && responseBody.data.pools) {
-      if (responseBody.data.pools.length > 0) {
-        fee = responseBody.data.pools[0].feeTier;
-      }
-    } else {
-      error = true;
-    }
-    response = await fetch('https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3', {
-      method: 'POST',
-      headesrs: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        query:
-          `
-            {
-               pools(where:{
-                 token0:"` +
-          token1 +
-          `",
-                 token1:"` +
-          token0 +
-          `"
-               }){
-                 feeTier
-               }
-             }
-   `,
-      }),
-    });
-    responseBody = await response.json();
-    if (responseBody.data && responseBody.data.pools) {
-      if (responseBody.data.pools.length > 0) {
-        fee = responseBody.data.pools[0].feeTier;
-      }
-    } else {
-      error = true;
-    }
-    resolve({
-      error: error,
-      fee: fee,
-    });
-  });
-}
-
 // Honeypot test
-async function testHoneypot(web3, tokenAddress, mainTokenAddress, routerAddress, multicallAddress, mainTokentoSell, maxgas, minMain, fee) {
+async function testHoneypot(web3, tokenAddress, mainTokenAddress, routerAddress, multicallAddress, mainTokentoSell, maxgas, minMain) {
   return new Promise(async (resolve) => {
     try {
       // Create contracts
@@ -549,16 +581,7 @@ async function testHoneypot(web3, tokenAddress, mainTokenAddress, routerAddress,
       var approveMainTokenABI = approveMainToken.encodeABI();
 
       // Swap MainToken to Token call
-      var swapMainforTokens = routerContract.methods.exactInputSingle({
-        tokenIn: mainTokenAddress,
-        tokenOut: tokenAddress,
-        fee: fee,
-        recipient: multicallAddress,
-        deadline: timeStamp,
-        amountIn: mainTokentoSellfixed,
-        amountOutMinimum: 0,
-        sqrtPriceLimitX96: 0,
-      });
+      var swapMainforTokens = routerContract.methods.swapExactTokensForTokens(mainTokentoSellfixed, 0, [mainTokenAddress, tokenAddress], multicallAddress, timeStamp);
       var swapMainforTokensABI = swapMainforTokens.encodeABI();
 
       var calls = [
@@ -579,7 +602,7 @@ async function testHoneypot(web3, tokenAddress, mainTokenAddress, routerAddress,
       // If error it means there is not enough liquidity
       var error = false;
       if (result.returnData[0] != '0x00' && result.returnData[1] != '0x00') {
-        var receivedTokens = web3.eth.abi.decodeLog([{ internalType: 'uint256', name: 'amountOut', type: 'uint256' }], result.returnData[1]).amountOut * 10 ** -tokenDecimals;
+        var receivedTokens = web3.eth.abi.decodeLog([{ internalType: 'uint256[]', name: 'amounts', type: 'uint256[]' }], result.returnData[1]).amounts[1] * 10 ** -tokenDecimals;
 
         // We will try to sell half of the Tokens
         var fixd = tokenDecimals;
@@ -602,16 +625,7 @@ async function testHoneypot(web3, tokenAddress, mainTokenAddress, routerAddress,
         var approveMainTokenABI = approveMainToken.encodeABI();
 
         // Swap MainToken to Token call
-        var swapMainforTokens = routerContract.methods.exactInputSingle({
-          tokenIn: mainTokenAddress,
-          tokenOut: tokenAddress,
-          fee: fee,
-          recipient: multicallAddress,
-          deadline: timeStamp,
-          amountIn: mainTokentoSellfixed,
-          amountOutMinimum: 0,
-          sqrtPriceLimitX96: 0,
-        });
+        var swapMainforTokens = routerContract.methods.swapExactTokensForTokens(mainTokentoSellfixed, 0, [mainTokenAddress, tokenAddress], multicallAddress, timeStamp);
         var swapMainforTokensABI = swapMainforTokens.encodeABI();
 
         // Approve to sell the Token in the Dex call
@@ -619,17 +633,18 @@ async function testHoneypot(web3, tokenAddress, mainTokenAddress, routerAddress,
         var approveTokenABI = approveToken.encodeABI();
 
         // Swap Token to MainToken call
-        var swapTokensforMain = routerContract.methods.exactInputSingle({
-          tokenIn: tokenAddress,
-          tokenOut: mainTokenAddress,
-          fee: fee,
-          recipient: multicallAddress,
-          deadline: timeStamp,
-          amountIn: tokensToSellfixed,
-          amountOutMinimum: 0,
-          sqrtPriceLimitX96: 0,
-        });
+        var swapTokensforMain = routerContract.methods.swapExactTokensForTokens(tokensToSellfixed, 0, [tokenAddress, mainTokenAddress], multicallAddress, timeStamp);
         var swapTokensforMainABI = swapTokensforMain.encodeABI();
+
+        // Swap Token to MainToken call if the previous one fails
+        var swapTokensforMainFees = routerContract.methods.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+          tokensToSellfixed,
+          0,
+          [tokenAddress, mainTokenAddress],
+          multicallAddress,
+          timeStamp
+        );
+        var swapTokensforMainFeesABI = swapTokensforMainFees.encodeABI();
 
         // MainToken Balance call
         var mainTokenBalance = mainTokencontract.methods.balanceOf(multicallAddress);
@@ -639,16 +654,28 @@ async function testHoneypot(web3, tokenAddress, mainTokenAddress, routerAddress,
         var tokenBalance = tokenContract.methods.balanceOf(multicallAddress);
         var tokenBalanceABI = tokenBalance.encodeABI();
 
+        // Expected MainToken from the Token to MainToken swap call
+        var amountOut = routerContract.methods.getAmountsOut(tokensToSellfixed, [tokenAddress, mainTokenAddress]);
+        var amountOutABI = amountOut.encodeABI();
+
         // Initial price in MainToken of 1 Token, for calculating price impact
+        var amountOutAsk = routerContract.methods.getAmountsOut(setDecimals(1, tokenDecimals), [tokenAddress, mainTokenAddress]);
+        var amountOutAskABI = amountOutAsk.encodeABI();
         var initialPrice = 0;
         var finalPrice = 0;
         var priceImpact = 0;
+        try {
+          initialPrice = await amountOutAsk.call();
+          initialPrice = initialPrice[1];
+        } catch (err) {}
 
         // Check if Token has Max Transaction amount
         var maxTokenTransaction = null;
         var maxTokenTransactionMain = null;
         try {
           maxTokenTransaction = await tokenContract.methods._maxTxAmount().call();
+          maxTokenTransactionMain = await routerContract.methods.getAmountsOut(maxTokenTransaction, [tokenAddress, mainTokenAddress]).call();
+          maxTokenTransactionMain = parseFloat(maxTokenTransactionMain[1] * 10 ** -mainTokenDecimals).toFixed(4);
           maxTokenTransaction = maxTokenTransaction * 10 ** -tokenDecimals;
         } catch (err) {}
 
@@ -660,7 +687,10 @@ async function testHoneypot(web3, tokenAddress, mainTokenAddress, routerAddress,
           { target: tokenAddress, callData: approveTokenABI, ethtosell: 0, gastouse: maxgas }, // Approve Token sell
           { target: routerAddress, callData: swapTokensforMainABI, ethtosell: 0, gastouse: maxgas }, // Token -> MainToken
           { target: mainTokenAddress, callData: mainTokenBalanceABI, ethtosell: 0, gastouse: maxgas }, // MainToken Balance
-          { target: routerAddress, callData: swapMainforTokensABI, ethtosell: 0, gastouse: maxgas }, // MainToken -> Token
+          { target: routerAddress, callData: amountOutABI, ethtosell: 0, gastouse: maxgas }, // Expected MainToken from the Token to MainToken swap
+          { target: routerAddress, callData: swapTokensforMainFeesABI, ethtosell: 0, gastouse: maxgas }, // Token -> MainToken
+          { target: mainTokenAddress, callData: mainTokenBalanceABI, ethtosell: 0, gastouse: maxgas }, // MainToken Balance
+          { target: routerAddress, callData: amountOutAskABI, ethtosell: 0, gastouse: maxgas }, // Final price of the Token
         ];
 
         // Run the multicall
@@ -679,27 +709,31 @@ async function testHoneypot(web3, tokenAddress, mainTokenAddress, routerAddress,
 
         // Simulate the steps
         if (result.returnData[1] != '0x00') {
-          output = web3.eth.abi.decodeLog([{ internalType: 'uint256', name: 'amountOut', type: 'uint256' }], result.returnData[1]).amountOut * 10 ** -tokenDecimals;
-          initialPrice = output;
+          output = web3.eth.abi.decodeLog([{ internalType: 'uint256[]', name: 'amounts', type: 'uint256[]' }], result.returnData[1]).amounts[1] * 10 ** -tokenDecimals;
           buyGas = result.gasUsed[1];
         }
         if (result.returnData[2] != '0x00') {
           realOutput = web3.eth.abi.decodeLog([{ internalType: 'uint256', name: '', type: 'uint256' }], result.returnData[2])[0] * 10 ** -tokenDecimals;
         }
         if (result.returnData[4] != '0x00') {
-          expected = web3.eth.abi.decodeLog([{ internalType: 'uint256', name: 'amountOut', type: 'uint256' }], result.returnData[4]).amountOut * 10 ** -mainTokenDecimals;
+          obtained = web3.eth.abi.decodeLog([{ internalType: 'uint256[]', name: 'amounts', type: 'uint256[]' }], result.returnData[4]).amounts[1] * 10 ** -mainTokenDecimals;
           sellGas = result.gasUsed[4];
         } else {
-          // If so... this is honeypot!
-          honeypot = true;
-          problem = true;
-        }
-        if (result.returnData[5] != '0x00') {
-          obtained = web3.eth.abi.decodeLog([{ internalType: 'uint256', name: '', type: 'uint256' }], result.returnData[5])[0] * 10 ** -mainTokenDecimals;
+          if (result.returnData[7] != '0x00') {
+            obtained = (result.returnData[8] - result.returnData[5]) * 10 ** -mainTokenDecimals;
+            sellGas = result.gasUsed[7];
+          } else {
+            // If so... this is honeypot!
+            honeypot = true;
+            problem = true;
+          }
         }
         if (result.returnData[6] != '0x00') {
-          finalPrice = web3.eth.abi.decodeLog([{ internalType: 'uint256', name: 'amountOut', type: 'uint256' }], result.returnData[6]).amountOut * 10 ** -tokenDecimals;
-          priceImpact = parseFloat(((initialPrice - finalPrice) / finalPrice) * 100).toFixed(1);
+          expected = web3.eth.abi.decodeLog([{ internalType: 'uint256[]', name: 'amounts', type: 'uint256[]' }], result.returnData[6]).amounts[1] * 10 ** -mainTokenDecimals;
+        }
+        if (result.returnData[9] != '0x00') {
+          finalPrice = web3.eth.abi.decodeLog([{ internalType: 'uint256[]', name: 'amounts', type: 'uint256[]' }], result.returnData[9]).amounts[1];
+          priceImpact = parseFloat(((finalPrice - initialPrice) / initialPrice) * 100).toFixed(1);
           if (priceImpact > priceImp) {
             problem = true;
             extra = 'Price change after the swaps is ' + priceImpact + '%, which is really high! (Too high percentages can cause false positives)';
@@ -731,7 +765,7 @@ async function testHoneypot(web3, tokenAddress, mainTokenAddress, routerAddress,
           maxTokenTransactionMain: maxTokenTransactionMain,
           tokenSymbol: tokenSymbol,
           mainTokenSymbol: mainTokensymbol,
-          priceImpact: priceImpact,
+          priceImpact: priceImpact < 0.0 ? '0.0' : priceImpact,
           problem: problem,
           extra: extra,
         });
@@ -766,7 +800,7 @@ async function testHoneypot(web3, tokenAddress, mainTokenAddress, routerAddress,
 }
 
 // HoneypotPlus test
-async function testHoneypotPlus(web3, tokenAddress, mainTokenAddress, routerAddress, multicallAddress, mainTokentoSell, maxgas, minMain, myToken, fee, fee2) {
+async function testHoneypotPlus(web3, tokenAddress, mainTokenAddress, routerAddress, multicallAddress, mainTokentoSell, maxgas, minMain, myToken) {
   return new Promise(async (resolve) => {
     try {
       // Create contracts
@@ -789,21 +823,12 @@ async function testHoneypotPlus(web3, tokenAddress, mainTokenAddress, routerAddr
       // Fixed value of MyToken to sell
       var mainTokentoSellfixed = setDecimals(mainTokentoSell, myTokenDecimals);
 
-      // Approve to sell the MyToken in the Dex call
+      // Approve to sell MyToken in the Dex call
       var approveMyToken = myTokencontract.methods.approve(routerAddress, '115792089237316195423570985008687907853269984665640564039457584007913129639935');
       var approveMyTokenABI = approveMyToken.encodeABI();
 
       // Swap MyToken to MainToken call
-      var swapMyforTokens = routerContract.methods.exactInputSingle({
-        tokenIn: myToken,
-        tokenOut: mainTokenAddress,
-        fee: fee2,
-        recipient: multicallAddress,
-        deadline: timeStamp,
-        amountIn: mainTokentoSellfixed,
-        amountOutMinimum: 0,
-        sqrtPriceLimitX96: 0,
-      });
+      var swapMyforTokens = routerContract.methods.swapExactTokensForTokens(mainTokentoSellfixed, 0, [myToken, mainTokenAddress], multicallAddress, timeStamp);
       var swapMyforTokensABI = swapMyforTokens.encodeABI();
 
       var calls = [
@@ -822,7 +847,7 @@ async function testHoneypotPlus(web3, tokenAddress, mainTokenAddress, routerAddr
       var mainTokentoSell2 = 0;
       var mainTokentoSell2fixed = 0;
       if (result.returnData[0] != '0x00' && result.returnData[1] != '0x00') {
-        mainTokentoSell2 = web3.eth.abi.decodeLog([{ internalType: 'uint256', name: 'amountOut', type: 'uint256' }], result.returnData[1]).amountOut * 10 ** -mainTokenDecimals;
+        mainTokentoSell2 = web3.eth.abi.decodeLog([{ internalType: 'uint256[]', name: 'amounts', type: 'uint256[]' }], result.returnData[1]).amounts[1] * 10 ** -mainTokenDecimals;
 
         // We will try to sell half of the Tokens
         var fixd = mainTokenDecimals;
@@ -836,16 +861,7 @@ async function testHoneypotPlus(web3, tokenAddress, mainTokenAddress, routerAddr
       var approveMainTokenABI = approveMainToken.encodeABI();
 
       // Swap MainToken to Token call
-      var swapMainforTokens = routerContract.methods.exactInputSingle({
-        tokenIn: mainTokenAddress,
-        tokenOut: tokenAddress,
-        fee: fee,
-        recipient: multicallAddress,
-        deadline: timeStamp,
-        amountIn: mainTokentoSell2fixed,
-        amountOutMinimum: 0,
-        sqrtPriceLimitX96: 0,
-      });
+      var swapMainforTokens = routerContract.methods.swapExactTokensForTokens(mainTokentoSell2fixed, 0, [mainTokenAddress, tokenAddress], multicallAddress, timeStamp);
       var firstSwapMainforTokensABI = swapMainforTokens.encodeABI();
 
       var calls = [
@@ -868,7 +884,7 @@ async function testHoneypotPlus(web3, tokenAddress, mainTokenAddress, routerAddr
       // If error it means there is not enough liquidity
       var error = false;
       if (result.returnData[2] != '0x00' && result.returnData[3] != '0x00') {
-        var receivedTokens = web3.eth.abi.decodeLog([{ internalType: 'uint256', name: 'amountOut', type: 'uint256' }], result.returnData[3]).amountOut * 10 ** -tokenDecimals;
+        var receivedTokens = web3.eth.abi.decodeLog([{ internalType: 'uint256[]', name: 'amounts', type: 'uint256[]' }], result.returnData[3]).amounts[1] * 10 ** -tokenDecimals;
 
         // We will try to sell half of the Tokens
         var fixd = tokenDecimals;
@@ -882,43 +898,27 @@ async function testHoneypotPlus(web3, tokenAddress, mainTokenAddress, routerAddr
       // Honeypot check variable
       var honeypot = false;
       if (!error) {
-        // For checking if some problems and extra messages
+        // Check if some problems and extra messages
         var problem = false;
         var extra = null;
-
-        // Approve to sell the MainToken in the Dex call
-        var approveMainToken = mainTokencontract.methods.approve(routerAddress, '115792089237316195423570985008687907853269984665640564039457584007913129639935');
-        var approveMainTokenABI = approveMainToken.encodeABI();
-
-        // Swap MainToken to Token call
-        var swapMainforTokens = routerContract.methods.exactInputSingle({
-          tokenIn: mainTokenAddress,
-          tokenOut: tokenAddress,
-          fee: fee,
-          recipient: multicallAddress,
-          deadline: timeStamp,
-          amountIn: mainTokentoSellfixed,
-          amountOutMinimum: 0,
-          sqrtPriceLimitX96: 0,
-        });
-        var swapMainforTokensABI = swapMainforTokens.encodeABI();
 
         // Approve to sell the Token in the Dex call
         var approveToken = tokenContract.methods.approve(routerAddress, '115792089237316195423570985008687907853269984665640564039457584007913129639935');
         var approveTokenABI = approveToken.encodeABI();
 
         // Swap Token to MainToken call
-        var swapTokensforMain = routerContract.methods.exactInputSingle({
-          tokenIn: tokenAddress,
-          tokenOut: mainTokenAddress,
-          fee: fee,
-          recipient: multicallAddress,
-          deadline: timeStamp,
-          amountIn: tokensToSellfixed,
-          amountOutMinimum: 0,
-          sqrtPriceLimitX96: 0,
-        });
+        var swapTokensforMain = routerContract.methods.swapExactTokensForTokens(tokensToSellfixed, 0, [tokenAddress, mainTokenAddress], multicallAddress, timeStamp);
         var swapTokensforMainABI = swapTokensforMain.encodeABI();
+
+        // Swap Token to MainToken call if the previous one fails
+        var swapTokensforMainFees = routerContract.methods.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+          tokensToSellfixed,
+          0,
+          [tokenAddress, mainTokenAddress],
+          multicallAddress,
+          timeStamp
+        );
+        var swapTokensforMainFeesABI = swapTokensforMainFees.encodeABI();
 
         // MainToken Balance call
         var mainTokenBalance = mainTokencontract.methods.balanceOf(multicallAddress);
@@ -928,16 +928,28 @@ async function testHoneypotPlus(web3, tokenAddress, mainTokenAddress, routerAddr
         var tokenBalance = tokenContract.methods.balanceOf(multicallAddress);
         var tokenBalanceABI = tokenBalance.encodeABI();
 
+        // Expected MainToken from the Token to MainToken swap call
+        var amountOut = routerContract.methods.getAmountsOut(tokensToSellfixed, [tokenAddress, mainTokenAddress]);
+        var amountOutABI = amountOut.encodeABI();
+
         // Initial price in MainToken of 1 Token, for calculating price impact
+        var amountOutAsk = routerContract.methods.getAmountsOut(setDecimals(1, tokenDecimals), [tokenAddress, mainTokenAddress]);
+        var amountOutAskABI = amountOutAsk.encodeABI();
         var initialPrice = 0;
         var finalPrice = 0;
         var priceImpact = 0;
+        try {
+          initialPrice = await amountOutAsk.call();
+          initialPrice = initialPrice[1];
+        } catch (err) {}
 
         // Check if Token has Max Transaction amount
         var maxTokenTransaction = null;
         var maxTokenTransactionMain = null;
         try {
           maxTokenTransaction = await tokenContract.methods._maxTxAmount().call();
+          maxTokenTransactionMain = await routerContract.methods.getAmountsOut(maxTokenTransaction, [tokenAddress, mainTokenAddress]).call();
+          maxTokenTransactionMain = parseFloat(maxTokenTransactionMain[1] * 10 ** -mainTokenDecimals).toFixed(4);
           maxTokenTransaction = maxTokenTransaction * 10 ** -tokenDecimals;
         } catch (err) {}
 
@@ -951,7 +963,10 @@ async function testHoneypotPlus(web3, tokenAddress, mainTokenAddress, routerAddr
           { target: tokenAddress, callData: approveTokenABI, ethtosell: 0, gastouse: maxgas }, // Approve Token sell
           { target: routerAddress, callData: swapTokensforMainABI, ethtosell: 0, gastouse: maxgas }, // Token -> MainToken
           { target: mainTokenAddress, callData: mainTokenBalanceABI, ethtosell: 0, gastouse: maxgas }, // MainToken Balance
-          { target: routerAddress, callData: firstSwapMainforTokensABI, ethtosell: 0, gastouse: maxgas }, // MainToken -> Token
+          { target: routerAddress, callData: amountOutABI, ethtosell: 0, gastouse: maxgas }, // Expected MainToken from the Token to MainToken swap
+          { target: routerAddress, callData: swapTokensforMainFeesABI, ethtosell: 0, gastouse: maxgas }, // Token -> MainToken
+          { target: mainTokenAddress, callData: mainTokenBalanceABI, ethtosell: 0, gastouse: maxgas }, // MainToken Balance
+          { target: routerAddress, callData: amountOutAskABI, ethtosell: 0, gastouse: maxgas }, // Final price of the Token
         ];
 
         // Run the multicall
@@ -970,27 +985,31 @@ async function testHoneypotPlus(web3, tokenAddress, mainTokenAddress, routerAddr
 
         // Simulate the steps
         if (result.returnData[3] != '0x00') {
-          output = web3.eth.abi.decodeLog([{ internalType: 'uint256', name: 'amountOut', type: 'uint256' }], result.returnData[3]).amountOut * 10 ** -tokenDecimals;
-          initialPrice = output;
+          output = web3.eth.abi.decodeLog([{ internalType: 'uint256[]', name: 'amounts', type: 'uint256[]' }], result.returnData[3]).amounts[1] * 10 ** -tokenDecimals;
           buyGas = result.gasUsed[3];
         }
         if (result.returnData[4] != '0x00') {
           realOutput = web3.eth.abi.decodeLog([{ internalType: 'uint256', name: '', type: 'uint256' }], result.returnData[4])[0] * 10 ** -tokenDecimals;
         }
         if (result.returnData[6] != '0x00') {
-          expected = web3.eth.abi.decodeLog([{ internalType: 'uint256', name: 'amountOut', type: 'uint256' }], result.returnData[6]).amountOut * 10 ** -mainTokenDecimals;
+          obtained = web3.eth.abi.decodeLog([{ internalType: 'uint256[]', name: 'amounts', type: 'uint256[]' }], result.returnData[6]).amounts[1] * 10 ** -mainTokenDecimals;
           sellGas = result.gasUsed[6];
         } else {
-          // If so... this is honeypot!
-          honeypot = true;
-          problem = true;
-        }
-        if (result.returnData[7] != '0x00') {
-          obtained = web3.eth.abi.decodeLog([{ internalType: 'uint256', name: '', type: 'uint256' }], result.returnData[7])[0] * 10 ** -mainTokenDecimals;
+          if (result.returnData[9] != '0x00') {
+            obtained = (result.returnData[10] - result.returnData[7]) * 10 ** -mainTokenDecimals;
+            sellGas = result.gasUsed[9];
+          } else {
+            // If so... this is honeypot!
+            honeypot = true;
+            problem = true;
+          }
         }
         if (result.returnData[8] != '0x00') {
-          finalPrice = web3.eth.abi.decodeLog([{ internalType: 'uint256', name: 'amountOut', type: 'uint256' }], result.returnData[8]).amountOut * 10 ** -tokenDecimals;
-          priceImpact = parseFloat(((initialPrice - finalPrice) / finalPrice) * 100).toFixed(1);
+          expected = web3.eth.abi.decodeLog([{ internalType: 'uint256[]', name: 'amounts', type: 'uint256[]' }], result.returnData[8]).amounts[1] * 10 ** -mainTokenDecimals;
+        }
+        if (result.returnData[11] != '0x00') {
+          finalPrice = web3.eth.abi.decodeLog([{ internalType: 'uint256[]', name: 'amounts', type: 'uint256[]' }], result.returnData[11]).amounts[1];
+          priceImpact = parseFloat(((finalPrice - initialPrice) / initialPrice) * 100).toFixed(1);
           if (priceImpact > priceImp) {
             problem = true;
             extra = 'Price change after the swaps is ' + priceImpact + '%, which is really high! (Too high percentages can cause false positives)';
@@ -1022,7 +1041,7 @@ async function testHoneypotPlus(web3, tokenAddress, mainTokenAddress, routerAddr
           maxTokenTransactionMain: maxTokenTransactionMain,
           tokenSymbol: tokenSymbol,
           mainTokenSymbol: mainTokensymbol,
-          priceImpact: priceImpact,
+          priceImpact: priceImpact < 0.0 ? '0.0' : priceImpact,
           problem: problem,
           extra: extra,
         });
@@ -1058,66 +1077,35 @@ async function testHoneypotPlus(web3, tokenAddress, mainTokenAddress, routerAddr
 
 export async function main(req, res) {
   const tokenAddress = req.params.address;
-  var getFeeResult;
-  if (`${req.params.address2}`.toLowerCase() == 'default') {
-    getFeeResult = await getFee(`${req.params.address}`.toLowerCase(), mainTokenAddress.toLowerCase());
-  } else {
-    getFeeResult = await getFee(`${req.params.address}`.toLowerCase(), `${req.params.address2}`.toLowerCase());
-  }
-  var fee = getFeeResult.fee;
-
-  if (!getFeeResult.error) {
-    if (`${req.params.address2}`.toLowerCase() == mainTokenAddress.toLowerCase() || `${req.params.address2}`.toLowerCase() == 'default') {
-      var honeypot = await testHoneypot(web3, tokenAddress, mainTokenAddress, routerAddress, multicallAddress, mainTokentoSell, maxgas, minMain, fee);
-      if (honeypot.error)
-        return res.status(403).json({
-          error: true,
-          msg: 'Error testing the honeypot, retry!',
-        });
-      if (honeypot.ExError)
-        return res.status(404).json({
-          error: true,
-          data: honeypot,
-        });
-      res.json({
+  if (`${req.params.address2}`.toLowerCase() == mainTokenAddress.toLowerCase() || `${req.params.address2}`.toLowerCase() == 'default') {
+    var honeypot = await testHoneypot(web3, tokenAddress, mainTokenAddress, routerAddress, multicallAddress, mainTokentoSell, maxgas, minMain);
+    if (honeypot.error)
+      return res.status(403).json({
+        error: true,
+        msg: 'Error testing the honeypot, retry!',
+      });
+    if (honeypot.ExError)
+      return res.status(404).json({
+        error: true,
         data: honeypot,
       });
-    } else {
-      var getFeeResult;
-      // It should exist
-      getFeeResult = await getFee(`${req.params.address2}`.toLowerCase(), mainTokenAddress.toLowerCase());
-      var fee2 = getFeeResult.fee;
-      var honeypotPlus = await testHoneypotPlus(
-        web3,
-        tokenAddress,
-        req.params.address2,
-        routerAddress,
-        multicallAddress,
-        mainTokentoSell,
-        maxgas,
-        minMain,
-        mainTokenAddress,
-        fee,
-        fee2
-      );
-      if (honeypotPlus.error)
-        return res.status(403).json({
-          error: true,
-          msg: 'Error testing the honeypot, retry!',
-        });
-      if (honeypotPlus.ExError)
-        return res.status(404).json({
-          error: true,
-          data: honeypotPlus,
-        });
-      res.json({
+    res.json({
+      data: honeypot,
+    });
+  } else {
+    var honeypotPlus = await testHoneypotPlus(web3, tokenAddress, req.params.address2, routerAddress, multicallAddress, mainTokentoSell, maxgas, minMain, mainTokenAddress);
+    if (honeypotPlus.error)
+      return res.status(403).json({
+        error: true,
+        msg: 'Error testing the honeypot, retry!',
+      });
+    if (honeypotPlus.ExError)
+      return res.status(404).json({
+        error: true,
         data: honeypotPlus,
       });
-    }
-  } else {
-    res.status(403).json({
-      error: true,
-      msg: 'This pair does not exist!',
+    res.json({
+      data: honeypotPlus,
     });
   }
 }
